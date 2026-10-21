@@ -1,0 +1,244 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Artbrok</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Jost:wght@400;500&display=swap">
+<style>
+/* Layout: fondo escultórico a pantalla completa; columna editorial a la izquierda, logo y acceso arriba, franja de publicaciones abajo. */
+:root {
+  --ink: #0a0603;
+  --paper: #f7f0e6;
+  --ember: #e8923f;
+  --copper: #b8733a;
+  --line: rgba(232, 146, 63, 0.55);
+  --display: "Newsreader", "Times New Roman", serif;
+  --label: "Jost", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--display);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  position: relative;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+a:focus-visible { outline: 1px solid var(--ember); outline-offset: 4px; }
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background: url("bg.jpg") right center / cover no-repeat, var(--ink);
+  z-index: 0;
+}
+.bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(10,6,3,.55) 0%, rgba(10,6,3,.15) 45%, rgba(10,6,3,0) 70%),
+    linear-gradient(0deg, rgba(10,6,3,.75) 0%, rgba(10,6,3,0) 28%);
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100svh;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding-block: clamp(20px, 3.2vw, 48px) clamp(20px, 2.6vw, 40px);
+  padding-inline: clamp(0px, 3vw, 56px);
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  row-gap: clamp(20px, 2.4vw, 36px);
+}
+
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.logo img { display: block; width: clamp(150px, 13vw, 215px); height: auto; }
+.login {
+  font-family: var(--label);
+  font-size: 0.78rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.6rem;
+}
+.login::after { content: ""; width: clamp(32px, 4vw, 56px); height: 1px; background: var(--paper); transition: width .25s, background .25s; }
+.login:hover::after { width: clamp(48px, 6vw, 84px); background: var(--ember); }
+
+.hero { align-self: center; max-width: 760px; }
+h1 {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(3.3rem, 7vw, 7rem);
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.sub {
+  margin: clamp(14px, 1.6vw, 24px) 0 0;
+  font-weight: 300;
+  font-size: clamp(1.35rem, 2.45vw, 2.45rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  max-width: 14em;
+}
+
+.registry { margin-top: clamp(26px, 3.2vw, 52px); }
+.eyebrow {
+  font-family: var(--label);
+  font-size: 0.72rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ember);
+  margin: 0 0 1.1rem;
+}
+.artists { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.row { display: flex; flex-wrap: wrap; column-gap: 0.9rem; row-gap: 0.4rem; align-items: baseline; }
+.artists a { display: inline-flex; align-items: baseline; gap: 0.65rem; font-size: clamp(1rem, 1.15vw, 1.2rem); transition: color .2s; }
+.artists a:hover .n, .artists a:hover { color: var(--ember); }
+.n { color: var(--ember); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 1.05em; }
+.dot { color: var(--copper); }
+.dot::before { content: "\00b7"; }
+
+.services {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-family: var(--label);
+  font-size: 0.74rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  row-gap: 14px;
+}
+.services a { padding: 0 clamp(14px, 2.4vw, 38px); position: relative; transition: color .2s; line-height: 1.6; }
+.services a:first-child { padding-left: 0; }
+.services a + a::before { content: ""; position: absolute; left: 0; top: 50%; height: 1.6rem; width: 1px; background: var(--ember); transform: translateY(-50%); opacity: .8; }
+.services a:hover { color: var(--ember); }
+
+.latest {
+  border-top: 1px solid var(--line);
+  padding-top: clamp(18px, 1.8vw, 26px);
+  display: grid;
+  grid-template-columns: minmax(110px, 0.9fr) 4.3fr minmax(110px, 1fr);
+  align-items: center;
+  column-gap: clamp(16px, 2vw, 32px);
+}
+.lbl {
+  font-family: var(--label);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  line-height: 1.9;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+.thumbs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(10px, 1.3vw, 20px); }
+.thumbs a { display: block; overflow: hidden; }
+.thumbs img { display: block; width: 100%; aspect-ratio: 5 / 3; object-fit: cover; transition: transform .6s ease, filter .3s; filter: saturate(.95); }
+.thumbs a:hover img { transform: scale(1.05); filter: saturate(1.15) brightness(1.08); }
+.all {
+  font-family: var(--label);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  line-height: 1.9;
+  text-transform: uppercase;
+  color: var(--ember);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.1rem;
+}
+.all span:first-child { text-align: left; }
+.all svg { width: 26px; height: 14px; flex: none; transition: transform .25s; }
+.all:hover svg { transform: translateX(6px); }
+
+@media (max-width: 960px) {
+  .bg { background-position: 70% center; }
+  .bg::after {
+    background:
+      linear-gradient(180deg, rgba(10,6,3,.5) 0%, rgba(10,6,3,.78) 45%, rgba(10,6,3,.9) 100%);
+  }
+  .latest { grid-template-columns: 1fr 1fr; row-gap: 18px; }
+  .thumbs { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(2, 1fr); }
+  .all { justify-content: flex-end; }
+}
+@media (max-width: 560px) {
+  .row { column-gap: 0.7rem; }
+  .services a { padding: 0 14px; }
+  .services a:first-child { padding-left: 0; }
+  .services a + a::before { display: none; }
+  .services { column-gap: 0; }
+  .services a { padding-left: 0; padding-right: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+
+<div class="bg" role="img" aria-label="Sello ornamental Artbrok en negro y cobre"></div>
+
+<main class="page">
+  <header class="top">
+    <a class="logo" href="#" aria-label="Artbrok, Private art broker"><img src="logo.png" alt="Artbrok | Private art broker" width="900" height="279"></a>
+    <a class="login" href="#ingresar">Ingresar</a>
+  </header>
+
+  <section class="hero">
+    <h1>Private<br>Art Brokers</h1>
+    <p class="sub">Asesoría y adquisición privada de arte.</p>
+
+    <div class="registry">
+      <p class="eyebrow">Obras disponibles en registro</p>
+      <ul class="artists">
+        <li class="row">
+          <a href="#rafael-coronel"><span class="n">24</span><span>Rafael Coronel</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#sebastian"><span class="n">18</span><span>Sebastián</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#jorge-marin"><span class="n">12</span><span>Jorge Marín</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#javier-marin"><span class="n">9</span><span>Javier Marín</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#leonora-carrington"><span class="n">7</span><span>Leonora Carrington</span></a>
+        </li>
+        <li class="row">
+          <a href="#francisco-toledo"><span class="n">15</span><span>Francisco Toledo</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#rodrigo-de-la-sierra"><span class="n">11</span><span>Rodrigo de la Sierra</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#armando-fallas-varela"><span class="n">8</span><span>Armando Fallas Varela</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#carlos-oviedo"><span class="n">13</span><span>Carlos Oviedo</span></a>
+        </li>
+        <li class="row">
+          <a href="#diego-isabel-santos"><span class="n">6</span><span>Diego Isabel Santos</span></a><span class="dot" aria-hidden="true"></span>
+          <a href="#carlos-abascal"><span class="n">10</span><span>Carlos Abascal</span></a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <nav class="services" aria-label="Servicios">
+    <a href="#catalogos">Catálogos personalizados</a>
+    <a href="#compra-venta">Asistencia de compra-venta</a>
+    <a href="#simulaciones">Simulaciones arquitectónicas</a>
+    <a href="#contacto">Contacto</a>
+  </nav>
+
+  <section class="latest" aria-label="Últimas publicaciones">
+    <div class="lbl">Últimas<br>publicaciones</div>
+    <ul class="thumbs">
+      <li><a href="#publicacion-1"><img src="t1.jpg" alt="Busto de bronce de perfil femenino" width="460" height="276"></a></li>
+      <li><a href="#publicacion-2"><img src="t2.jpg" alt="Pintura abstracta en negro, ocre y blanco" width="460" height="276"></a></li>
+      <li><a href="#publicacion-3"><img src="t3.jpg" alt="Cabeza escultórica de bronce de perfil" width="460" height="276"></a></li>
+      <li><a href="#publicacion-4"><img src="t4.jpg" alt="Escultura esbelta en una sala de exhibición" width="460" height="276"></a></li>
+    </ul>
+    <a class="all" href="#publicaciones">
+      <span>Ver<br>publicaciones</span>
+      <svg viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 7h25M19 1l6 6-6 6"/></svg>
+    </a>
+  </section>
+</main>
+
+</body></html>
