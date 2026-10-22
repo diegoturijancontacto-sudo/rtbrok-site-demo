@@ -827,11 +827,13 @@ h1 {
       get: function () { return sel.slice(); },
       add: function (o) { if (sel.indexOf(o) < 0) { sel.push(o); drawChips(); summary(); } },
       reset: function () { sel = []; drawChips(); summary(); close(); },
+      setOptions: function (list) { options = list.slice(); shown = options.slice(); if (isOpen()) render(); },
       close: close, isOpen: isOpen
     };
   }
   var artists = multi($("#ms-artists"), ARTISTS, { search: true, chips: "#chips-artists" });
   var styles = multi($("#ms-styles"), STYLES, { search: false });
+  window.__artbrokSetArtists = function (names) { if (names && names.length) artists.setOptions(names); };
 
   /* Abrir y cerrar */
   function focusables() {
@@ -864,8 +866,9 @@ h1 {
   Array.prototype.forEach.call(document.querySelectorAll("[data-open-catalog]"), function (a) {
     a.addEventListener("click", function (e) { e.preventDefault(); openModal(); });
   });
-  Array.prototype.forEach.call(document.querySelectorAll(".artists a"), function (a) {
-    a.addEventListener("click", function (e) { e.preventDefault(); openModal(a.lastElementChild.textContent.trim()); });
+  $(".artists").addEventListener("click", function (e) {
+    var a = e.target.closest("a"); if (!a) return;
+    e.preventDefault(); openModal(a.lastElementChild.textContent.trim());
   });
 
   window.__artbrokOpenCatalog = openModal;
@@ -935,6 +938,73 @@ h1 {
       clearTimeout(t); showFail(url);
     }).then(function () { setBusy(false); });
   });
+})();
+</script>
+
+
+<script>
+/* Registro de obras por artista.
+   Lee las obras de la base de datos (Google Apps Script) y cuenta cuántas tiene cada autor.
+   El HTML de la lista es un valor de muestra que se reemplaza cuando llegan los datos. */
+(function () {
+  var API = "https://script.google.com/macros/s/AKfycbxyBzZ7duM3pKtobXHj8A2NgFpIarP5WPS71TKTH2uFMOXXL8rzo68-blixF8kgCwvl8w/exec";
+  var MAX_ARTISTS = 15, PER_ROW = 5, CACHE_KEY = "artbrok_registro_v1";
+  var ul = document.querySelector(".artists");
+  if (!ul || !window.fetch) return;
+
+  function norm(s) { return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim().toLowerCase(); }
+  function clean(s) { return String(s).replace(/\s+/g, " ").trim(); }
+  function slug(s) { return norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+
+  function tally(obras) {
+    var map = {};
+    obras.forEach(function (o) {
+      var raw = o && o.autor ? clean(o.autor) : "";
+      if (!raw) return;
+      var k = norm(raw), e = map[k] || (map[k] = { total: 0, forms: {} });
+      e.total++; e.forms[raw] = (e.forms[raw] || 0) + 1;
+    });
+    return Object.keys(map).map(function (k) {
+      var e = map[k], best = Object.keys(e.forms).sort(function (a, b) { return e.forms[b] - e.forms[a]; })[0];
+      return { name: best, count: e.total };
+    }).sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name, "es"); });
+  }
+
+  function render(list) {
+    if (!list || !list.length) return;
+    var shown = list.slice(0, MAX_ARTISTS), frag = document.createDocumentFragment();
+    for (var i = 0; i < shown.length; i += PER_ROW) {
+      var li = document.createElement("li"); li.className = "row";
+      shown.slice(i, i + PER_ROW).forEach(function (a, k) {
+        if (k) { var d = document.createElement("span"); d.className = "dot"; d.setAttribute("aria-hidden", "true"); li.appendChild(d); }
+        var link = document.createElement("a"); link.href = "#" + slug(a.name);
+        var n = document.createElement("span"); n.className = "n"; n.textContent = a.count;
+        var t = document.createElement("span"); t.textContent = a.name;
+        link.appendChild(n); link.appendChild(t); li.appendChild(link);
+      });
+      frag.appendChild(li);
+    }
+    ul.innerHTML = ""; ul.appendChild(frag);
+    if (window.__artbrokSetArtists) window.__artbrokSetArtists(list.map(function (a) { return a.name; }));
+  }
+
+  var cached = null;
+  try { cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch (e) {}
+  if (cached && cached.length) render(cached);
+
+  var ctrl = window.AbortController ? new AbortController() : null;
+  var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
+  fetch(API + "?endpoint=obras", ctrl ? { signal: ctrl.signal } : {}).then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(function (data) {
+    clearTimeout(timer);
+    if (data.error) throw new Error(data.error);
+    var list = tally(data.registrosObra || []);
+    if (!list.length) return;
+    render(list);
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch (e) {}
+  }).catch(function (e) { clearTimeout(timer); try { console.warn("Registro de obras no disponible", e); } catch (_) {} });
 })();
 </script>
 
