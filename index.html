@@ -403,13 +403,13 @@ h1 {
 
   <section class="latest" aria-label="Últimas publicaciones">
     <div class="lbl">Últimas<br>publicaciones</div>
-    <ul class="thumbs">
-      <li><a href="#publicacion-1"><img src="t1.jpg" alt="Busto de bronce de perfil femenino" width="460" height="276"></a></li>
-      <li><a href="#publicacion-2"><img src="t2.jpg" alt="Pintura abstracta en negro, ocre y blanco" width="460" height="276"></a></li>
-      <li><a href="#publicacion-3"><img src="t3.jpg" alt="Cabeza escultórica de bronce de perfil" width="460" height="276"></a></li>
-      <li><a href="#publicacion-4"><img src="t4.jpg" alt="Escultura esbelta en una sala de exhibición" width="460" height="276"></a></li>
+    <ul class="thumbs" id="ig-thumbs">
+      <li><a href="https://www.instagram.com/p/DexGZjImZzL/" target="_blank" rel="noopener"><img src="ig1.jpg" alt="Un nuevo amanecer" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DevtSeRkaMI/" target="_blank" rel="noopener"><img src="ig2.jpg" alt="Danza Carmesí" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DetF_CBEVu9/" target="_blank" rel="noopener"><img src="ig3.jpg" alt="Boceto viento" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DejDof5lXsK/" target="_blank" rel="noopener"><img src="ig4.jpg" alt="Dualidad" width="460" height="276"></a></li>
     </ul>
-    <a class="all" href="#publicaciones">
+    <a class="all" href="https://www.instagram.com/rtbrok/" target="_blank" rel="noopener">
       <span>Ver<br>publicaciones</span>
       <svg viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 7h25M19 1l6 6-6 6"/></svg>
     </a>
@@ -523,6 +523,37 @@ h1 {
     </div>
   </div>
 </div>
+
+<script>
+/* Últimas publicaciones de Instagram.
+   El Actor de Apify guarda posts.json y las fotos en el repo; la página las lee desde ahí.
+   Si vive en el mismo repo, usa BASE = "instagram". El HTML de arriba es una copia de las últimas
+   publicaciones y se queda si la lectura falla (por ejemplo, en la vista previa del artifact, que bloquea hosts externos). */
+(function () {
+  var BASE = "https://raw.githubusercontent.com/diegoturijancontacto-sudo/proyectBND/main/instagram";
+  var LIMIT = 4;
+  var list = document.getElementById("ig-thumbs");
+  if (!list || !window.fetch) return;
+  function title(c) { var t = String(c || "").split("|").map(function (s) { return s.trim(); }).filter(Boolean)[0]; return t || "Publicación de Instagram"; }
+  fetch(BASE + "/posts.json", { cache: "no-cache" }).then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(function (feed) {
+    var posts = (feed.posts || []).filter(function (p) { return p && p.image && p.permalink; }).slice(0, LIMIT);
+    if (!posts.length) return;
+    var frag = document.createDocumentFragment();
+    posts.forEach(function (p) {
+      var li = document.createElement("li"), a = document.createElement("a"), img = document.createElement("img");
+      a.href = p.permalink; a.target = "_blank"; a.rel = "noopener";
+      a.setAttribute("aria-label", title(p.caption) + (p.is_video ? " (video en Instagram)" : " en Instagram"));
+      img.src = BASE + "/" + p.image; img.alt = String(p.caption || title(p.caption)).slice(0, 120);
+      img.width = 460; img.height = 276; img.loading = "lazy";
+      a.appendChild(img); li.appendChild(a); frag.appendChild(li);
+    });
+    list.innerHTML = ""; list.appendChild(frag);
+  }).catch(function (e) { try { console.warn("Instagram feed no disponible", e); } catch (_) {} });
+})();
+</script>
 
 <div class="modal-root" id="market-modal" hidden>
   <div class="scrim" data-close></div>
