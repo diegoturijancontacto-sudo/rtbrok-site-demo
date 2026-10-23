@@ -57,12 +57,14 @@ a:focus-visible { outline: 1px solid var(--ember); outline-offset: 4px; }
   padding-block: clamp(20px, 3.2vw, 48px) clamp(20px, 2.6vw, 40px);
   padding-inline: clamp(0px, 3vw, 56px);
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto;
   row-gap: clamp(20px, 2.4vw, 36px);
 }
 
-.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.logo img { display: block; width: clamp(150px, 13vw, 215px); height: auto; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px 24px; }
+.top .toplinks { margin-left: auto; }
+.top .services { order: 3; flex: 1 1 100%; justify-content: flex-start; padding-top: 0; }
+.logo img { display: block; width: clamp(240px, 26vw, 430px); height: auto; }
 .login {
   font-family: var(--label);
   font-size: 0.78rem;
@@ -144,7 +146,7 @@ h1 {
 }
 .thumbs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(10px, 1.3vw, 20px); }
 .thumbs a { display: block; overflow: hidden; }
-.thumbs img { display: block; width: 100%; aspect-ratio: 5 / 3; object-fit: cover; transition: transform .6s ease, filter .3s; filter: saturate(.95); }
+.thumbs img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 3; object-fit: cover; transition: transform .6s ease, filter .3s; filter: saturate(.95); }
 .thumbs a:hover img { transform: scale(1.05); filter: saturate(1.15) brightness(1.08); }
 .all {
   font-family: var(--label);
@@ -363,6 +365,12 @@ h1 {
 <main class="page">
   <header class="top">
     <a class="logo" href="#" aria-label="Artbrok, Private art broker"><img src="logo.png" alt="Artbrok | Private art broker" width="900" height="279"></a>
+    <nav class="services" aria-label="Servicios">
+    <a href="#catalogos" data-open-catalog>Catálogos personalizados</a>
+    <a href="#compra-venta">Asistencia de compra-venta</a>
+    <a href="#simulaciones">Simulaciones arquitectónicas</a>
+    <a href="#contacto">Contacto</a>
+  </nav>
     <nav class="toplinks" aria-label="Acceso">
       <a class="login plain" href="#utilidades" data-open-market>Utilidades</a>
       <a class="login" href="#ingresar">Ingresar</a>
@@ -397,15 +405,9 @@ h1 {
     </div>
   </section>
 
-  <nav class="services" aria-label="Servicios">
-    <a href="#catalogos" data-open-catalog>Catálogos personalizados</a>
-    <a href="#compra-venta">Asistencia de compra-venta</a>
-    <a href="#simulaciones">Simulaciones arquitectónicas</a>
-    <a href="#contacto">Contacto</a>
-  </nav>
 
   <section class="latest" aria-label="Últimas publicaciones">
-    <div class="lbl">Últimas<br>publicaciones</div>
+    <div class="lbl">obra<br>disponible</div>
     <ul class="thumbs" id="ig-thumbs">
       <li><a href="https://www.instagram.com/p/DexGZjImZzL/" target="_blank" rel="noopener"><img src="ig1.jpg" alt="Un nuevo amanecer" width="460" height="276"></a></li>
       <li><a href="https://www.instagram.com/p/DevtSeRkaMI/" target="_blank" rel="noopener"><img src="ig2.jpg" alt="Danza Carmesí" width="460" height="276"></a></li>
@@ -413,7 +415,7 @@ h1 {
       <li><a href="https://www.instagram.com/p/DejDof5lXsK/" target="_blank" rel="noopener"><img src="ig4.jpg" alt="Dualidad" width="460" height="276"></a></li>
     </ul>
     <a class="all" href="https://www.instagram.com/rtbrok/" target="_blank" rel="noopener">
-      <span>Ver<br>publicaciones</span>
+      <span>ver el catálogo<br>completo en instagram</span>
       <svg viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 7h25M19 1l6 6-6 6"/></svg>
     </a>
   </section>
