@@ -85,9 +85,10 @@
     const notas = $('notas').value.trim();
 
     if (!nombre) throw new Error('Escribe tu nombre.');
-    // Si escribieron 10 dígitos, se agrega la lada de México (52)
-    if (numero.length === 10) numero = '52' + numero;
-    if (numero.length < 12) throw new Error('El número debe tener 10 dígitos.');
+    // Celulares de México: WhatsApp los maneja como 521 + 10 dígitos
+    if (numero.length === 10) numero = '521' + numero;                                   // 2202334062 -> 5212202334062
+    else if (numero.length === 12 && numero.startsWith('52')) numero = '521' + numero.slice(2); // 522202334062 -> 5212202334062
+    if (numero.length !== 13 || !numero.startsWith('521')) throw new Error('El número debe tener 10 dígitos.');
 
     return { nombre, numero, servicio, precio: Number(precio), cantidad, notas };
   }
