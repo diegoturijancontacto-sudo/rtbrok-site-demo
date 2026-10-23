@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generar y enviar PDF por WhatsApp</title>
+<style>
+  :root { --verde: #1f9d55; --borde: #d9dee3; --fondo: #f5f7f9; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--fondo); margin: 0; padding: 24px 16px; color: #1c2430; }
+  main { max-width: 480px; margin: 0 auto; background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: #5b6673; font-size: .9rem; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: 14px 0 6px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; }
+  textarea { resize: vertical; min-height: 80px; }
+  .fila { display: flex; gap: 12px; }
+  .fila > div { flex: 1; }
+  .botones { display: flex; gap: 10px; margin-top: 22px; }
+  button { flex: 1; padding: 12px; border: 0; border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+  #btnDescargar { background: #e9edf1; color: #1c2430; }
+  #btnEnviar { background: var(--verde); color: #fff; }
+  button:disabled { opacity: .6; cursor: wait; }
+  #estado { margin-top: 16px; font-size: .9rem; min-height: 1.2em; }
+  #estado.ok { color: var(--verde); }
+  #estado.error { color: #c0392b; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cotización en PDF</h1>
+  <p class="sub">Llena los datos, genera el PDF y recíbelo por WhatsApp.</p>
+
+  <label for="nombre">Nombre</label>
+  <input id="nombre" type="text" placeholder="Tu nombre">
+
+  <label for="numero">WhatsApp (10 dígitos, México)</label>
+  <input id="numero" type="tel" inputmode="numeric" placeholder="2221234567">
+
+  <div class="fila">
+    <div>
+      <label for="servicio">Servicio</label>
+      <select id="servicio">
+        <option value="Sitio web básico|3500">Sitio web básico — $3,500</option>
+        <option value="Sitio web con tienda|8500">Sitio web con tienda — $8,500</option>
+        <option value="App móvil|15000">App móvil — $15,000</option>
+        <option value="Soporte mensual|900">Soporte mensual — $900</option>
+      </select>
+    </div>
+    <div style="max-width:110px">
+      <label for="cantidad">Cantidad</label>
+      <input id="cantidad" type="number" min="1" value="1">
+    </div>
+  </div>
+
+  <label for="notas">Notas</label>
+  <textarea id="notas" placeholder="Detalles adicionales (opcional)"></textarea>
+
+  <div class="botones">
+    <button id="btnDescargar" type="button">Descargar PDF</button>
+    <button id="btnEnviar" type="button">Enviar por WhatsApp</button>
+  </div>
+  <div id="estado" role="status"></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  // URL de tu bot en Render (sin "/" al final)
+  const BOT_URL = 'https://bot-yy1q.onrender.com';
+
+  const $ = (id) => document.getElementById(id);
+  const estado = $('estado');
+
+  function mostrar(texto, tipo = '') {
+    estado.textContent = texto;
+    estado.className = tipo;
+  }
+
+  // Lee el formulario y valida
+  function leerDatos() {
+    const nombre = $('nombre').value.trim();
+    let numero = $('numero').value.replace(/\D/g, '');
+    const [servicio, precio] = $('servicio').value.split('|');
+    const cantidad = Math.max(1, parseInt($('cantidad').value, 10) || 1);
+    const notas = $('notas').value.trim();
+
+    if (!nombre) throw new Error('Escribe tu nombre.');
+    // Si escribieron 10 dígitos, se agrega la lada de México (52)
+    if (numero.length === 10) numero = '52' + numero;
+    if (numero.length < 12) throw new Error('El número debe tener 10 dígitos.');
+
+    return { nombre, numero, servicio, precio: Number(precio), cantidad, notas };
+  }
+
+  // Construye el PDF con lo que eligió el usuario
+  function generarPDF(d) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const total = d.precio * d.cantidad;
+    const dinero = (n) => '$' + n.toLocaleString('es-MX') + ' MXN';
+
+    doc.setFontSize(20);
+    doc.text('Cotización', 20, 25);
+
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text('Fecha: ' + new Date().toLocaleDateString('es-MX'), 20, 34);
+    doc.setTextColor(0);
+
+    doc.setFontSize(12);
+    doc.text('Cliente: ' + d.nombre, 20, 48);
+
+    doc.line(20, 56, 190, 56);
+    doc.setFont(undefined, 'bold');
+    doc.text('Concepto', 20, 64);
+    doc.text('Cant.', 120, 64);
+    doc.text('Importe', 190, 64, { align: 'right' });
+    doc.setFont(undefined, 'normal');
+    doc.line(20, 68, 190, 68);
+
+    doc.text(d.servicio, 20, 77);
+    doc.text(String(d.cantidad), 120, 77);
+    doc.text(dinero(total), 190, 77, { align: 'right' });
+
+    doc.line(20, 85, 190, 85);
+    doc.setFont(undefined, 'bold');
+    doc.text('Total: ' + dinero(total), 190, 95, { align: 'right' });
+    doc.setFont(undefined, 'normal');
+
+    if (d.notas) {
+      doc.text('Notas:', 20, 115);
+      doc.text(doc.splitTextToSize(d.notas, 170), 20, 123);
+    }
+
+    return doc;
+  }
+
+  $('btnDescargar').addEventListener('click', () => {
+    try {
+      generarPDF(leerDatos()).save('cotizacion.pdf');
+      mostrar('PDF descargado.', 'ok');
+    } catch (e) {
+      mostrar(e.message, 'error');
+    }
+  });
+
+  $('btnEnviar').addEventListener('click', async () => {
+    const boton = $('btnEnviar');
+    try {
+      const datos = leerDatos();
+      boton.disabled = true;
+
+      const blob = generarPDF(datos).output('blob');
+
+      // Render gratis se duerme: primero lo despertamos
+      mostrar('Conectando con el bot (puede tardar hasta un minuto)...');
+      await fetch(BOT_URL + '/');
+
+      mostrar('Enviando PDF...');
+      const form = new FormData();
+      form.append('number', datos.numero);
+      form.append('caption', 'Hola ' + datos.nombre + ', aquí está tu cotización.');
+      form.append('file', blob, 'cotizacion.pdf'); // el nombre debe terminar en .pdf
+
+      const res = await fetch(BOT_URL + '/send-file', { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (data.success) {
+        mostrar('¡Listo! El PDF se envió a tu WhatsApp.', 'ok');
+      } else {
+        mostrar('Error: ' + (data.error || 'no se pudo enviar'), 'error');
+      }
+    } catch (e) {
+      mostrar('No se pudo enviar: ' + e.message, 'error');
+    } finally {
+      boton.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
