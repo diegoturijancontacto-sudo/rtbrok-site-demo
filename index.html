@@ -107,9 +107,9 @@ h1 {
 }
 .artists { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .row { display: flex; flex-wrap: wrap; column-gap: 0.9rem; row-gap: 0.4rem; align-items: baseline; }
-.artists a { display: inline-flex; align-items: baseline; gap: 0.65rem; font-size: clamp(1rem, 1.15vw, 1.2rem); transition: color .2s; }
+.artists a { display: inline-flex; align-items: baseline; gap: 0.65rem; font-family: var(--label); font-size: clamp(0.92rem, 1.02vw, 1.08rem); transition: color .2s; }
 .artists a:hover .n, .artists a:hover { color: var(--ember); }
-.n { color: var(--ember); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 1.05em; }
+.n { color: var(--ember); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 1em; }
 .dot { color: var(--copper); }
 .dot::before { content: "\00b7"; }
 
@@ -128,14 +128,8 @@ h1 {
 .services a + a::before { content: ""; position: absolute; left: 0; top: 50%; height: 1.6rem; width: 1px; background: var(--ember); transform: translateY(-50%); opacity: .8; }
 .services a:hover { color: var(--ember); }
 
-.latest {
-  border-top: 1px solid var(--line);
-  padding-top: clamp(18px, 1.8vw, 26px);
-  display: grid;
-  grid-template-columns: minmax(110px, 0.9fr) 4.3fr minmax(110px, 1fr);
-  align-items: center;
-  column-gap: clamp(16px, 2vw, 32px);
-}
+.latest { border-top: 1px solid var(--line); padding-top: clamp(16px, 1.6vw, 22px); display: flex; flex-direction: column; gap: clamp(14px, 1.4vw, 20px); }
+.latest-head { display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
 .lbl {
   font-family: var(--label);
   font-size: 0.72rem;
@@ -144,7 +138,7 @@ h1 {
   text-transform: uppercase;
   color: var(--ember);
 }
-.thumbs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(10px, 1.3vw, 20px); }
+.thumbs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: clamp(10px, 1.1vw, 18px); }
 .thumbs a { display: block; overflow: hidden; }
 .thumbs img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 3; object-fit: cover; transition: transform .6s ease, filter .3s; filter: saturate(.95); }
 .thumbs a:hover img { transform: scale(1.05); filter: saturate(1.15) brightness(1.08); }
@@ -170,11 +164,10 @@ h1 {
     background:
       linear-gradient(180deg, rgba(10,6,3,.5) 0%, rgba(10,6,3,.78) 45%, rgba(10,6,3,.9) 100%);
   }
-  .latest { grid-template-columns: 1fr 1fr; row-gap: 18px; }
-  .thumbs { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(2, 1fr); }
-  .all { justify-content: flex-end; }
+  .thumbs { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 560px) {
+  .thumbs { grid-template-columns: repeat(2, 1fr); }
   .row { column-gap: 0.7rem; }
   .services a { padding: 0 14px; }
   .services a:first-child { padding-left: 0; }
@@ -406,18 +399,22 @@ h1 {
   </section>
 
 
-  <section class="latest" aria-label="Últimas publicaciones">
-    <div class="lbl">obra<br>disponible</div>
+  <section class="latest" aria-label="Obra disponible">
+    <div class="latest-head">
+      <div class="lbl">Obra disponible</div>
+      <a class="all" href="https://www.instagram.com/rtbrok/" target="_blank" rel="noopener">
+        <span>Ver el catálogo completo en Instagram</span>
+        <svg viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 7h25M19 1l6 6-6 6"/></svg>
+      </a>
+    </div>
     <ul class="thumbs" id="ig-thumbs">
-      <li><a href="https://www.instagram.com/p/DexGZjImZzL/" target="_blank" rel="noopener"><img src="ig1.jpg" alt="Un nuevo amanecer" width="460" height="276"></a></li>
-      <li><a href="https://www.instagram.com/p/DevtSeRkaMI/" target="_blank" rel="noopener"><img src="ig2.jpg" alt="Danza Carmesí" width="460" height="276"></a></li>
-      <li><a href="https://www.instagram.com/p/DetF_CBEVu9/" target="_blank" rel="noopener"><img src="ig3.jpg" alt="Boceto viento" width="460" height="276"></a></li>
-      <li><a href="https://www.instagram.com/p/DejDof5lXsK/" target="_blank" rel="noopener"><img src="ig4.jpg" alt="Dualidad" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/Dezmx6AmaVm/" target="_blank" rel="noopener"><img src="ig1.jpg" alt="#aldochaparro" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DexGZjImZzL/" target="_blank" rel="noopener"><img src="ig2.jpg" alt="Un nuevo amanecer" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DevtSeRkaMI/" target="_blank" rel="noopener"><img src="ig3.jpg" alt="Danza Carmesí" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DetF_CBEVu9/" target="_blank" rel="noopener"><img src="ig4.jpg" alt="Boceto viento" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DejDof5lXsK/" target="_blank" rel="noopener"><img src="ig5.jpg" alt="Dualidad" width="460" height="276"></a></li>
+      <li><a href="https://www.instagram.com/p/DehhzTQGc9F/" target="_blank" rel="noopener"><img src="ig6.jpg" alt="El Viaje miniatura" width="460" height="276"></a></li>
     </ul>
-    <a class="all" href="https://www.instagram.com/rtbrok/" target="_blank" rel="noopener">
-      <span>ver el catálogo<br>completo en instagram</span>
-      <svg viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 7h25M19 1l6 6-6 6"/></svg>
-    </a>
   </section>
 </main>
 
@@ -537,7 +534,7 @@ h1 {
    publicaciones y se queda si la lectura falla (por ejemplo, en la vista previa del artifact, que bloquea hosts externos). */
 (function () {
   var BASE = "https://raw.githubusercontent.com/diegoturijancontacto-sudo/proyectBND/main/instagram";
-  var LIMIT = 4;
+  var LIMIT = 6;
   var list = document.getElementById("ig-thumbs");
   if (!list || !window.fetch) return;
   function title(c) { var t = String(c || "").split("|").map(function (s) { return s.trim(); }).filter(Boolean)[0]; return t || "Publicación de Instagram"; }
