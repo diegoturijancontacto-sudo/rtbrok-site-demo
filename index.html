@@ -1,4 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta charset="utf-8">
 <title>Artbrok</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +18,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   background: var(--ink);
@@ -260,6 +262,7 @@ h1 {
 .btn-main:disabled { opacity: .6; cursor: progress; }
 .btn-main svg { width: 24px; height: 12px; }
 .status { font-family: var(--label); font-size: 0.82rem; line-height: 1.5; color: var(--err); }
+.status.info { color: rgba(247, 240, 230, 0.82); }
 .status:empty { display: none; }
 .status a { color: var(--ember); text-decoration: underline; text-underline-offset: 3px; }
 .done { text-align: left; padding: 6px 0 4px; }
@@ -524,6 +527,7 @@ h1 {
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* Últimas publicaciones de Instagram.
    El Actor de Apify guarda posts.json y las fotos en el repo; la página las lee desde ahí.
@@ -764,7 +768,7 @@ h1 {
     var chips = cfg.chips ? $(cfg.chips) : null;
     var sel = [], active = -1, shown = options.slice();
 
-    function norm(s) { return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+    function norm(s) { return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
     function isOpen() { return !list.hidden; }
     function render() {
       list.innerHTML = "";
@@ -873,6 +877,19 @@ h1 {
 
   window.__artbrokOpenCatalog = openModal;
 
+  /* Número para WhatsApp: México va como 521 + 10 dígitos */
+  function normalizeNumber(cc, d) {
+    d = String(d).replace(/\D/g, "");
+    if (cc === "52") {
+      if (d.length === 10) return "521" + d;
+      if (d.length === 12 && d.indexOf("52") === 0) return "521" + d.slice(2);
+      if (d.length === 13 && d.indexOf("521") === 0) return d;
+      return null;
+    }
+    d = d.replace(/^0+/, "");
+    return d.length >= 7 && d.length <= 12 ? cc + d : null;
+  }
+
   /* Validación y mensaje */
   function setErr(id, msg) {
     var wrap = $("#f-" + id) || $("#e-" + id).parentNode;
@@ -884,8 +901,8 @@ h1 {
     var name = $("#name").value.trim(), digits = $("#phone").value.replace(/\D/g, ""), mail = $("#mail").value.trim();
     var pmin = Number($("#pmin").value), pmax = Number($("#pmax").value);
     setErr("name", name ? "" : "Escribe tu nombre."); if (!name) { ok = false; firstBad = firstBad || $("#name"); }
-    var phoneBad = digits.length < 7 || digits.length > 13;
-    setErr("phone", phoneBad ? "Escribe un número de WhatsApp válido." : ""); if (phoneBad) { ok = false; firstBad = firstBad || $("#phone"); }
+    var phoneBad = !normalizeNumber($("#cc").value, digits);
+    setErr("phone", phoneBad ? ($("#cc").value === "52" ? "El número debe tener 10 dígitos." : "Escribe un número de WhatsApp válido.") : ""); if (phoneBad) { ok = false; firstBad = firstBad || $("#phone"); }
     var mailBad = mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);
     setErr("mail", mailBad ? "Revisa el formato del correo." : ""); if (mailBad) { ok = false; firstBad = firstBad || $("#mail"); }
     var priceBad = pmin && pmax && pmin > pmax;
@@ -910,34 +927,42 @@ h1 {
   }
   window.__artbrokBuildUrl = function () { return ENDPOINT + "?number=" + NUMBER + "&message=" + encodeURIComponent(buildMessage()); };
 
-  /* Envío */
+  /* Envío: busca obras en la base de datos, genera el PDF y lo manda al WhatsApp del usuario */
   function setBusy(b) {
     $("#send").disabled = b;
-    $("#send-label").textContent = b ? "Enviando…" : "Enviar catálogo por WhatsApp";
+    $("#send-label").textContent = b ? "Preparando…" : "Enviar catálogo por WhatsApp";
   }
-  function showFail(url) {
-    var st = $("#status");
-    st.textContent = "No se pudo enviar la solicitud desde esta página. ";
-    var a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Enviar de otra forma";
-    st.appendChild(a);
+  function note(text, isErr) {
+    var st = $("#status"); st.className = "status" + (isErr ? "" : " info"); st.textContent = text;
   }
+  function numList(v) { return v ? Number(v) : 0; }
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     if (!validate()) return;
-    var url = window.__artbrokBuildUrl(), name = $("#name").value.trim().split(/\s+/)[0];
-    $("#status").textContent = "";
+    var req = {
+      name: $("#name").value.trim(),
+      number: normalizeNumber($("#cc").value, $("#phone").value),
+      artists: artists.get(), styles: styles.get(),
+      pmin: numList($("#pmin").value), pmax: numList($("#pmax").value)
+    };
+    var first = req.name.split(/\s+/)[0];
+    /* Aviso al equipo con los datos del formulario (no bloquea el envío) */
+    try { fetch(window.__artbrokBuildUrl(), { mode: "no-cors" }).catch(function () {}); } catch (_) {}
+    note("Buscando obras…");
     setBusy(true);
-    var ctrl = new AbortController(), t = setTimeout(function () { ctrl.abort(); }, 75000);
-    fetch(url, { method: "GET", mode: "no-cors", signal: ctrl.signal }).then(function () {
-      clearTimeout(t);
-      $("#done-text").textContent = "Gracias, " + name + ". Te escribiremos por WhatsApp con la selección de obras.";
+    var work = window.__artbrokSendCatalog
+      ? window.__artbrokSendCatalog(req, function (t) { note(t); })
+      : Promise.reject(new Error("La página no terminó de cargar. Recárgala e inténtalo de nuevo."));
+    work.then(function (res) {
+      $("#done-text").textContent = "Gracias, " + first + ". Te enviamos " + res.count + (res.count === 1 ? " obra" : " obras") + " en un PDF a tu WhatsApp.";
       formView.hidden = true; doneView.hidden = false;
-      form.reset(); artists.reset(); styles.reset();
+      form.reset(); artists.reset(); styles.reset(); note("");
       ["name", "phone", "mail", "price"].forEach(function (k) { setErr(k, ""); });
-    }).catch(function () {
-      clearTimeout(t); showFail(url);
+    }).catch(function (err) {
+      note((err && err.message) || "No se pudo enviar el catálogo. Inténtalo de nuevo.", true);
     }).then(function () { setBusy(false); });
   });
+  window.__artbrokSetStyles = function (names) { if (names && names.length) styles.setOptions(names); };
 })();
 </script>
 
@@ -952,7 +977,7 @@ h1 {
   var ul = document.querySelector(".artists");
   if (!ul || !window.fetch) return;
 
-  function norm(s) { return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim().toLowerCase(); }
+  function norm(s) { return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase(); }
   function clean(s) { return String(s).replace(/\s+/g, " ").trim(); }
   function slug(s) { return norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 
@@ -992,19 +1017,303 @@ h1 {
   try { cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch (e) {}
   if (cached && cached.length) render(cached);
 
-  var ctrl = window.AbortController ? new AbortController() : null;
-  var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
-  fetch(API + "?endpoint=obras", ctrl ? { signal: ctrl.signal } : {}).then(function (r) {
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
-  }).then(function (data) {
-    clearTimeout(timer);
-    if (data.error) throw new Error(data.error);
-    var list = tally(data.registrosObra || []);
+  /* Una sola consulta de obras; el catálogo en PDF la reutiliza */
+  function fetchObras() {
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 45000);
+    return fetch(API + "?endpoint=obras", ctrl ? { signal: ctrl.signal } : {}).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (data) {
+      clearTimeout(timer);
+      if (data.error) throw new Error(data.error);
+      return data.registrosObra || [];
+    }, function (e) { clearTimeout(timer); throw e; });
+  }
+  window.__artbrokFetchObras = fetchObras;
+  window.__artbrokObrasP = fetchObras();
+
+  window.__artbrokObrasP.then(function (obras) {
+    var list = tally(obras);
     if (!list.length) return;
     render(list);
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch (e) {}
-  }).catch(function (e) { clearTimeout(timer); try { console.warn("Registro de obras no disponible", e); } catch (_) {} });
+    var seen = {}, tipos = [];
+    obras.forEach(function (o) {
+      var t = o && o.tipo_obra ? clean(o.tipo_obra) : "", k = norm(t);
+      if (t && !seen[k]) { seen[k] = 1; tipos.push(t); }
+    });
+    tipos.sort(function (a, b) { return a.localeCompare(b, "es"); });
+    if (window.__artbrokSetStyles) window.__artbrokSetStyles(tipos);
+  }).catch(function (e) { try { console.warn("Registro de obras no disponible", e); } catch (_) {} });
+})();
+</script>
+
+
+<script>
+/* Catálogo en PDF: busca obras en la base de datos según el formulario, arma el PDF con el formato
+   del catálogo impreso (portada y una obra por hoja) y lo envía por el bot de WhatsApp. */
+(function () {
+  var BOT_URL = "https://bot-yy1q.onrender.com";
+  var RATES = { USD: 1, MXN: 18.5, EUR: 0.92 };          /* unidades de cada moneda por 1 USD, para filtrar por precio */
+  var MAX_WORKS = 24, MAX_PX = 1100;
+  var LOGO_PATH = "./pdf-logo.png", FOOTER_LOGO_PATH = "./pdf-logo-pie.png";
+  var LEGAL_NOTE = "Los precios y la disponibilidad de las obras pueden cambiar sin previo aviso y están sujetos a confirmación. " +
+    "Este catálogo es informativo y no constituye una oferta vinculante.";
+  var FONT_FILES = [
+    ["Avenir-Roman.ttf", "Avenir-Roman"], ["Avenir-Black.ttf", "Avenir-Black"],
+    ["CormorantGaramond-SemiBold.ttf", "CormorantGaramond-SemiBold"], ["CormorantGaramond-MediumItalic.ttf", "CormorantGaramond-MediumItalic"]
+  ];
+
+  function norm(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase(); }
+  function fail(msg) { var e = new Error(msg); e.expected = true; return e; }
+
+  /* ---------- Búsqueda ---------- */
+  function priceOf(o) { var v = parseFloat(o.precio_venta) || 0; return v > 0 ? v : (parseFloat(o.precio_lista) || 0); }
+  function toUsd(v, cur) { return v / (RATES[String(cur || "MXN").toUpperCase()] || RATES.MXN); }
+
+  function search(obras, req) {
+    var arts = req.artists.map(norm), sty = req.styles.map(norm);
+    var found = obras.filter(function (o) {
+      if (!o || /vendid/i.test(o.estatus || "")) return false;
+      if (arts.length && arts.indexOf(norm(o.autor)) < 0) return false;
+      var p = priceOf(o), u = toUsd(p, o.tipo_moneda);
+      if (req.pmin && !(p > 0 && u >= req.pmin)) return false;
+      if (req.pmax && !(p > 0 && u <= req.pmax)) return false;
+      if (sty.length) {
+        var hay = [o.tipo_obra].concat(Array.isArray(o.tags) ? o.tags : []).map(norm);
+        if (!sty.some(function (s) { return hay.some(function (h) { return h && (h === s || h.indexOf(s) > -1); }); })) return false;
+      }
+      return true;
+    });
+    found.sort(function (a, b) {
+      var ia = arts.indexOf(norm(a.autor)), ib = arts.indexOf(norm(b.autor));
+      if (ia !== ib) return ia - ib;
+      return String(b.fecha_registro || "").localeCompare(String(a.fecha_registro || ""));
+    });
+    return { total: found.length, works: found.slice(0, MAX_WORKS) };
+  }
+
+  /* ---------- Datos de cada obra ---------- */
+  function imageUrl(o) {
+    var list = Array.isArray(o.adjuntos) ? o.adjuntos.filter(Boolean) : [];
+    var img = list.filter(function (a) { return String(a.mimeType || "").indexOf("image/") === 0; })[0] ||
+      list.filter(function (a) { return /\.(jpe?g|png|webp|gif)$/i.test(a.name || ""); })[0] ||
+      (list.every(function (a) { return !a.mimeType; }) ? list[0] : null);
+    if (!img) return null;
+    var m = String(img.id || img.url || "").match(/[-\w]{25,}/);
+    return m ? "https://lh3.googleusercontent.com/d/" + m[0] + "=w1200" : (img.url || null);
+  }
+  function dims(o) {
+    var v = [parseFloat(o.alto) || 0, parseFloat(o.ancho) || 0, parseFloat(o.largo) || 0].filter(function (n) { return n > 0; });
+    if (!v.length) return "";
+    var k = Math.max.apply(null, v) >= 10 ? 1 : 100;          /* la hoja guarda metros; si ya vienen en cm se dejan igual */
+    return v.map(function (n) { return +(n * k).toFixed(1); }).join(" x ") + " cm";
+  }
+  function artworkOf(o) {
+    var p = priceOf(o);
+    return {
+      title: String(o.nombre_obra || "SIN TÍTULO").toUpperCase(),
+      artist: String(o.autor || "").toUpperCase(),
+      medium: String(o.tipo_obra || "").toUpperCase(),
+      dimensions: dims(o),
+      price: p > 0 ? "$" + p.toLocaleString("en-US") + " " + (o.tipo_moneda || "MXN") : "",
+      code: String(o.clave || "").replace(/-/g, "").toUpperCase(),
+      url: imageUrl(o), image: null
+    };
+  }
+
+  /* ---------- Imágenes ---------- */
+  function loadImg(src, cors) {
+    return new Promise(function (res) {
+      var im = new Image(); if (cors) im.crossOrigin = "anonymous";
+      im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = src;
+    });
+  }
+  function toJpeg(url) {
+    if (!url) return Promise.resolve(null);
+    return loadImg(url, true).then(function (im) {
+      if (im) return im;
+      return fetch(url).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) {
+        var u = URL.createObjectURL(b);
+        return loadImg(u, false).then(function (x) { URL.revokeObjectURL(u); return x; });
+      }).catch(function () { return null; });
+    }).then(function (im) {
+      if (!im) return null;
+      var k = Math.min(1, MAX_PX / Math.max(im.naturalWidth, im.naturalHeight));
+      var w = Math.max(1, Math.round(im.naturalWidth * k)), h = Math.max(1, Math.round(im.naturalHeight * k));
+      var c = document.createElement("canvas"); c.width = w; c.height = h;
+      var x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(im, 0, 0, w, h);
+      try { return { data: c.toDataURL("image/jpeg", 0.82), w: w, h: h }; } catch (e) { return null; }
+    });
+  }
+  function loadAll(arts, progress) {
+    var i = 0, done = 0;
+    function worker() {
+      if (i >= arts.length) return Promise.resolve();
+      var a = arts[i++];
+      return toJpeg(a.url).then(function (img) { a.image = img; progress("Preparando imágenes " + (++done) + " de " + arts.length + "…"); }).then(worker);
+    }
+    return Promise.all([worker(), worker(), worker(), worker()]);
+  }
+  function fetchDataUrl(path) {
+    return fetch(path).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) {
+      return new Promise(function (res) { var fr = new FileReader(); fr.onload = function () { res(fr.result); }; fr.readAsDataURL(b); });
+    }).then(function (d) { return loadImg(d, false).then(function (im) { return im ? { data: d, w: im.naturalWidth, h: im.naturalHeight } : null; }); })
+      .catch(function () { return null; });
+  }
+
+  /* ---------- Fuentes del catálogo (si están en ./fonts; si no, tipografías estándar del PDF) ---------- */
+  var fontsP = null;
+  function b64(bytes) { var s = ""; for (var i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+  function loadFonts(doc) {
+    if (!fontsP) {
+      fontsP = Promise.all(FONT_FILES.map(function (f) {
+        return fetch("./fonts/" + f[0]).then(function (r) { if (!r.ok) throw new Error(f[0]); return r.arrayBuffer(); })
+          .then(function (buf) { return [f[1], b64(new Uint8Array(buf))]; });
+      })).catch(function () { return null; });
+    }
+    return fontsP.then(function (fonts) {
+      if (!fonts) return false;
+      fonts.forEach(function (f) { doc.addFileToVFS(f[0] + ".ttf", f[1]); });
+      doc.addFont("Avenir-Roman.ttf", "Avenir", "normal"); doc.addFont("Avenir-Roman.ttf", "Avenir", "bold");
+      doc.addFont("Avenir-Black.ttf", "Avenir Black", "normal");
+      doc.addFont("CormorantGaramond-SemiBold.ttf", "Cormorant Garamond", "bold");
+      doc.addFont("CormorantGaramond-MediumItalic.ttf", "Cormorant Garamond", "italic");
+      return true;
+    });
+  }
+
+  /* ---------- PDF ---------- */
+  function spaced(doc, text, maxW, size) {
+    var t = text.toUpperCase().split("").join(" ");
+    doc.setFontSize(size);
+    while (size > 12 && doc.getTextWidth(t) > maxW) { size -= 1; doc.setFontSize(size); }
+    return t;
+  }
+  function buildPDF(arts, cfg) {
+    var J = window.jspdf && window.jspdf.jsPDF;
+    if (!J) return Promise.reject(new Error("No se pudo cargar la librería de PDF. Recarga la página."));
+    var doc = new J("p", "mm", "a4"), W = 210, H = 297;
+    return Promise.all([loadFonts(doc), fetchDataUrl(LOGO_PATH), fetchDataUrl(FOOTER_LOGO_PATH)]).then(function (r) {
+      var custom = r[0], logo = r[1], flogo = r[2];
+      var F = custom
+        ? { serifB: ["Cormorant Garamond", "bold"], serifI: ["Cormorant Garamond", "italic"], sans: ["Avenir", "normal"], black: ["Avenir Black", "normal"] }
+        : { serifB: ["times", "bold"], serifI: ["times", "italic"], sans: ["helvetica", "normal"], black: ["helvetica", "bold"] };
+      function use(role, size) { doc.setFont(F[role][0], F[role][1]); if (size) doc.setFontSize(size); }
+
+      /* Portada */
+      var ty = 120;
+      if (logo) {
+        var lw = 85, lh = lw * logo.h / logo.w;
+        doc.saveGraphicsState(); doc.setGState(new doc.GState({ opacity: 0.05 }));
+        doc.addImage(logo.data, "PNG", (W - lw) / 2, ty - 35 - lh / 2, lw, lh); doc.restoreGraphicsState();
+      }
+      doc.setTextColor(20, 20, 20); doc.setFont("times", "normal");
+      doc.text(spaced(doc, cfg.title, 175, 28), W / 2, ty, { align: "center" });
+      doc.setFontSize(10);
+      doc.text(spaced(doc, cfg.subtitle, 175, 10), W / 2, ty + 15, { align: "center" });
+
+      doc.setFont("helvetica", "italic"); doc.setFontSize(7); doc.setTextColor(110);
+      var note = doc.splitTextToSize(cfg.legalNote, 160), lineH = 7 * 0.3528 * 1.15, noteY = H - 18 - (note.length - 1) * lineH;
+      var updY = Math.min(H - 40, noteY - 8);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+      doc.text(cfg.updateText.toUpperCase(), W / 2, updY, { align: "center" });
+      doc.setFont("helvetica", "italic"); doc.setFontSize(7); doc.setTextColor(110);
+      doc.text(note, W / 2, noteY, { align: "center", lineHeightFactor: 1.15 });
+
+      /* Una obra por hoja */
+      arts.forEach(function (a, i) {
+        doc.addPage();
+        var ix = 44.7, iy = 20, mw = 120.6, mh = 155;
+        if (a.image) {
+          var ratio = a.image.w / a.image.h, rw = ratio > mw / mh ? mw : mh * ratio, rh = ratio > mw / mh ? mw / ratio : mh;
+          doc.addImage(a.image.data, "JPEG", ix + (mw - rw) / 2, iy + (mh - rh) / 2, rw, rh, undefined, "FAST");
+        } else {
+          doc.setFillColor(245, 247, 250); doc.rect(ix, iy, mw, mh, "F");
+          doc.setTextColor(150); doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+          doc.text("IMAGEN NO DISPONIBLE", W / 2, iy + mh / 2, { align: "center" });
+        }
+        var rx = W - 22, y = 256.96;
+        doc.setTextColor(20, 20, 20); use("serifB", 14);
+        var tl = doc.splitTextToSize(a.title, 175).slice(0, 2);
+        doc.text(tl, rx, y - (tl.length - 1) * 5.6, { align: "right" });
+        if (a.artist) { use("serifI", 10); doc.text(a.artist, rx, y + 4.63, { align: "right" }); }
+
+        var info = [a.dimensions, a.medium, a.code].filter(Boolean), normal = info.join(" | "), sep = normal && a.price ? " | " : "";
+        if (normal || a.price) {
+          use("sans", 8); var nw = doc.getTextWidth(normal), sw = doc.getTextWidth(sep);
+          use("black", 8); var pw = doc.getTextWidth(a.price || "");
+          var cx = rx - (nw + sw + pw);
+          use("sans", 8); if (normal) { doc.text(normal, cx, 280.45); cx += nw; } if (sep) { doc.text(sep, cx, 280.45); cx += sw; }
+          if (a.price) { use("black", 8); doc.text(a.price, cx, 280.45); }
+        }
+
+        var fy = H - 12.9, x1 = 14, x2 = W - 14, ls = W * 0.05, tx = x1 + ls + 4;
+        doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.1);
+        if (flogo) { var fh = ls * flogo.h / flogo.w; doc.addImage(flogo.data, "PNG", x1, fy - fh / 2, ls, fh); }
+        use("serifI", 8); doc.setTextColor(20, 20, 20);
+        doc.text(doc.splitTextToSize(cfg.title + " • " + cfg.updateText + " • " + cfg.subtitle, 125)[0], tx, fy + 4);
+        doc.text("Pág " + (i + 1) + " de " + arts.length, x2, fy + 4, { align: "right" });
+        doc.line(tx, fy, x2, fy);
+      });
+      return doc.output("blob");
+    });
+  }
+
+  function coverOf(works) {
+    var names = [];
+    works.forEach(function (o) { var n = String(o.autor || "").trim(); if (n && names.indexOf(n) < 0) names.push(n); });
+    var sub = names.length === 1 ? "OBRA SELECCIONADA" : names.join(", ");
+    return {
+      title: names.length === 1 ? names[0] : "SELECCIÓN DE OBRAS",
+      subtitle: sub.length > 46 ? sub.slice(0, 43).replace(/[ ,]+$/, "") + "…" : (sub || "OBRA SELECCIONADA"),
+      updateText: "Actualizado al " + new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }),
+      legalNote: LEGAL_NOTE
+    };
+  }
+
+  /* ---------- Flujo completo ---------- */
+  function getObras() {
+    var p = window.__artbrokObrasP;
+    return (p ? p.catch(function () { return window.__artbrokFetchObras(); }) : window.__artbrokFetchObras())
+      .catch(function () { throw fail("No se pudo consultar la base de datos. Inténtalo de nuevo en un momento."); });
+  }
+  function withTimeout(ms) { var c = window.AbortController ? new AbortController() : null; var t = setTimeout(function () { if (c) c.abort(); }, ms); return { signal: c && c.signal, clear: function () { clearTimeout(t); } }; }
+
+  window.__artbrokSendCatalog = function (req, progress) {
+    /* Render gratis se duerme: se despierta mientras se arma el PDF */
+    var wake = fetch(BOT_URL + "/", { mode: "no-cors" }).catch(function () {});
+    var works, arts;
+    return getObras().then(function (obras) {
+      var r = search(obras, req);
+      if (!r.total) throw fail("No encontramos obras disponibles con esas características. Prueba con otro rango de precio o quita algún filtro.");
+      works = r.works; arts = works.map(artworkOf);
+      progress("Preparando imágenes 0 de " + arts.length + "…");
+      return loadAll(arts, progress);
+    }).then(function () {
+      progress("Generando el PDF…");
+      return buildPDF(arts, coverOf(works));
+    }).then(function (blob) {
+      progress("Conectando con el bot (puede tardar hasta un minuto)…");
+      return wake.then(function () {
+        progress("Enviando el PDF…");
+        var fd = new FormData();
+        fd.append("number", req.number);
+        fd.append("caption", "Hola " + req.name + ", aquí está tu catálogo de Artbrok.");
+        fd.append("file", blob, "catalogo_artbrok.pdf");
+        var to = withTimeout(90000);
+        return fetch(BOT_URL + "/send-file", { method: "POST", body: fd, signal: to.signal }).then(function (res) { to.clear(); return res.json(); }, function (e) { to.clear(); throw e; });
+      });
+    }).then(function (data) {
+      if (!data || !data.success) throw fail("No se pudo enviar el PDF: " + ((data && data.error) || "el bot no respondió"));
+      return { count: arts.length };
+    }, function (e) {
+      if (e && e.expected) throw e;
+      try { console.error(e); } catch (_) {}
+      throw new Error("No se pudo enviar el catálogo. Inténtalo de nuevo en un momento.");
+    });
+  };
 })();
 </script>
 
